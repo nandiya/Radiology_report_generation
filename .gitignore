@@ -1,3 +1,6 @@
 *.csv
 *.json
 *.ipynb
+*.jpg
+*.out
+*.slurm
