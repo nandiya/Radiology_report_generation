@@ -1,54 +1,23 @@
-
-from transformers import AutoImageProcessor, ViTModel
-import matplotlib.pyplot as plt
-import cv2
-from PIL import Image
-import numpy as np
-from collections import Counter
 import json
-import torch
-import pandas as pd
 import os
+import numpy as np
+from PIL import Image
+import cv2
+import argparse
+from collections import Counter
 
-def load_images(root_path, image_paths):
-    img_path = os.path.join(root_path, image_paths)
+
+
+
+def load_and_resize_image(root_path, image_path, size=(448, 448)):
+    img_path = os.path.join(root_path, image_path)
     image = Image.open(img_path).convert("RGB")
-    #image = image.resize(new_size)
+    image = image.resize(size, Image.LANCZOS)
     image = np.array(image)
     return image
 
-def get_rois_and_locs( rects):
-        rois = []
-        locs = []
-        for (x, y, w, h) in rects:
-            if w / float(W) < 0.1 or h / float(H) < 0.1:
-                continue
-            roi = orig[y:y + h, x:x + w]
-            roi = cv2.resize(roi, self.kwargs['INPUT_SIZE'])
-            rois.append(roi)
-            locs.append((x, y, w, h))
-        return rois, locs
-    
-def visualize_rois(rois):
-    fig, axes = plt.subplots(1, len(rois), figsize=(20, 6))
-    for ax, roi in zip(axes, rois):
-        ax.imshow(roi, cmap='gray')
-
-
-def selective_search(image, method="fast"):
-        ss = cv2.ximgproc.segmentation.createSelectiveSearchSegmentation()
-        print("12")
-        ss.setBaseImage(image)
-        print("22")
-        ss.switchToSelectiveSearchFast()
-    
-        return ss.process()
 
 def calculate_background_ratio(region):
-    """
-    Calculate the background ratio of a region.
-    The background is assumed to be the most common color in the region.
-    """
     region = region.reshape(-1, region.shape[-1])
     color_counts = Counter(map(tuple, region))
     background_color, background_count = color_counts.most_common(1)[0]
@@ -56,40 +25,30 @@ def calculate_background_ratio(region):
     return background_ratio
 
 def iou(boxA, boxB):
-    # Determine the (x, y)-coordinates of the intersection rectangle
     xA = max(boxA[0], boxB[0])
     yA = max(boxA[1], boxB[1])
     xB = min(boxA[0] + boxA[2], boxB[0] + boxB[2])
     yB = min(boxA[1] + boxA[3], boxB[1] + boxB[3])
-
-    # Compute the area of intersection rectangle
     interArea = max(0, xB - xA) * max(0, yB - yA)
     if interArea == 0:
         return 0
-
-    # Compute the area of both the prediction and ground-truth rectangles
     boxAArea = boxA[2] * boxA[3]
     boxBArea = boxB[2] * boxB[3]
+    return interArea / float(boxAArea + boxBArea - interArea)
 
-    # Compute the intersection over union by taking the intersection area and dividing it by the sum of prediction + ground-truth areas - the intersection area
-    iou = interArea / float(boxAArea + boxBArea - interArea)
-
-    return iou
-
-def filter_regions(image, regions, min_area=800000, max_area=2500000, max_background_ratio=0.7):
+def filter_regions(image, regions, min_area=40000, max_area=55000, max_background_ratio=0.7):
     filtered_regions = []
     seen_regions = set()
-    
     for (x, y, w, h) in regions:
         area = w * h
         check_ratio = 0
-        if w>h :
-            check_ratio = w/h
+        if w > h:
+            check_ratio = w / h
         else:
-            check_ratio = h/w
+            check_ratio = h / w
         if area < min_area or area > max_area:
             continue
-        if check_ratio > 8:
+        if check_ratio > 4:
             continue
         region = image[y:y+h, x:x+w]
         background_ratio = calculate_background_ratio(region)
@@ -102,8 +61,6 @@ def filter_regions(image, regions, min_area=800000, max_area=2500000, max_backgr
                 break
         if is_similar:
             continue
-
-        # Check if the region overlaps significantly with any already accepted region
         overlaps = False
         for (fx, fy, fw, fh) in filtered_regions:
             if iou((x, y, w, h), (fx, fy, fw, fh)) > 0.3:
@@ -111,79 +68,104 @@ def filter_regions(image, regions, min_area=800000, max_area=2500000, max_backgr
                 break
         if overlaps:
             continue
-
         region_key = (x, y, w, h)
         if region_key in seen_regions:
             continue
         seen_regions.add(region_key)
         filtered_regions.append((x, y, w, h))
-    
     return filtered_regions
-    
 
-def visualize_and_save(image, regions, output_path):
-    for (x, y, w, h) in regions:
-        cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
-    cv2.imwrite(output_path, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+def selective_search(image, method="fast"):
+    ss = cv2.ximgproc.segmentation.createSelectiveSearchSegmentation()
+    ss.setBaseImage(image)
+    if method == "fast":
+        ss.switchToSelectiveSearchFast()
+    else:
+        ss.switchToSelectiveSearchQuality()
+    return ss.process()
 
-# def region_visual_extractor(image, regions, size=(224, 224), image_processor=None, model=None):
-#     concatenated_features = None
-    
-#     for (x, y, w, h) in regions:
-#         region = image[y:y+h, x:x+w]
-#         region_resized = cv2.resize(region, size)
-        
-#         inputs = image_processor(images=region_resized, return_tensors="pt")
-#         with torch.no_grad():
-#             outputs = model(**inputs)
-#         last_hidden_states = outputs.last_hidden_state
+def mirror_bounding_box(box, image_width):
+    x, y, w, h = box
+    mirrored_x = image_width - x - w
+    return (mirrored_x, y, w, h)
 
-#         if concatenated_features is None:
-#             concatenated_features = last_hidden_states
-#         else:
-#             concatenated_features = torch.cat((concatenated_features, last_hidden_states))
-    
-#     return concatenated_features
+def shift_bounding_box(box, shift_x, shift_y, image_width, image_height):
+    x, y, w, h = box
+    if x + shift_x < 0 or x + w + shift_x > image_width:
+        shift_x = -shift_x
+    if y + shift_y < 0 or y + h + shift_y > image_height:
+        shift_y = -shift_y
+    new_x = min(image_width - w, max(0, x + shift_x))
+    new_y = min(image_height - h, max(0, y + shift_y))
+    return (new_x, new_y, w, h)
 
-
-
-
+# Initialize variables
 root_path = "/group/pmc023/rnandiya/dataset/physionet.org/files/mimic-cxr-jpg/2.0.0/files/"
-
-imageId_disease = json.load(open("imageId_disease.json", "r", encoding="utf-8"))
-
-# feature_extractor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224-in21k')
-# model = ViTModel.from_pretrained('google/vit-base-patch16-224-in21k')
-j  = 1
+imageId_disease = json.load(open("/group/pmc023/rnandiya/data_result/train_chunk_9.json", "r", encoding="utf-8"))
 list_regions = {}
-for data in imageId_disease:
-    tmp_dict = {}
-    for img_id in imageId_disease[data]:
-        print(j)
-        print("--")
-        img = load_images(root_path, imageId_disease[data][img_id]["image_path"][0])
-        print("00")
+# print("")
+# img = load_and_resize_image(root_path, imageId_disease["7f23b996-22544258-fcf2fbc3-f8dbf8e7-b6c0e4c5"]["disease"]["image_path"][0])
+# image_height, image_width, _ = img.shape
+
+# regions = selective_search(img)
+# filtered_regions = filter_regions(img, regions)
+# # Ensure the filtered regions are converted to Python int
+# filtered_regions = [(int(x), int(y), int(w), int(h)) for (x, y, w, h) in filtered_regions]
+# if len(filtered_regions) == 4:
+#     list_regions[img_id] = filtered_regions
+# else:
+#     list_regions[img_id] = filtered_regions[:4]
+# while len(filtered_regions) < 4:
+#     if len(filtered_regions) == 1:
+#         mirrored_box = mirror_bounding_box(filtered_regions[0], image_width)
+#         filtered_regions.append(mirrored_box)
+#     elif len(filtered_regions) == 2:
+#         shifted_box_right = shift_bounding_box(filtered_regions[0], shift_x=100, shift_y=0, image_width=image_width, image_height=image_height)
+#         filtered_regions.append(shifted_box_right)
+#     elif len(filtered_regions) == 3:
+#         shifted_box_down = shift_bounding_box(filtered_regions[0], shift_x=0, shift_y=100, image_width=image_width, image_height=image_height)
+#         filtered_regions.append(shifted_box_down)
+
+# if len(filtered_regions) > 4:
+#     filtered_regions = filtered_regions[:4]
+
+# print(filtered_regions)
+# for (x, y, w, h) in filtered_regions:
+#     cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+# # Save the image with bounding boxes
+# output_image_path = "output_image_with_boxes1.jpg"
+# cv2.imwrite(output_image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+
+# Save regions to json file
+# file_name = "regions_" + img_id + ".json"
+# with open(file_name, "w") as outfile:
+#     json.dump(list_regions, outfile)
+for img_id in imageId_disease:
+    try:
+        img = load_and_resize_image(root_path, imageId_disease[img_id]["disease"]["image_path"][0])
+        image_height, image_width, _ = img.shape
         regions = selective_search(img)
-        print("aaa")
         filtered_regions = filter_regions(img, regions)
-        print(filtered_regions)
-        #region_feature_results = region_visual_extractor(img,filtered_regions, (224, 224), feature_extractor, model)
-        #visualize_an d_save(img, filtered_regions, "output_image.jpg")
-        if len(filtered_regions) == 4:
-            tmp_dict[img_id] = filtered_regions
-        else:
-            print("1")
-            tmp_dict[img_id] = filtered_regions[:4]
-            print("ssss")
-        #(region_feature_results.shape)
-        j = j+1
-        break
-    list_regions[data] = tmp_dict
-    break   
+        # Ensure the filtered regions are converted to Python int
+        filtered_regions = [(int(x), int(y), int(w), int(h)) for (x, y, w, h) in filtered_regions]
+        # while len(filtered_regions) < 4:
+        #     if len(filtered_regions) == 1:
+        #         mirrored_box = mirror_bounding_box(filpwtered_regions[0], image_width)
+        #         filtered_regions.append(mirrored_box)
+        #     elif len(filtered_regions) == 2:
+        #         shifted_box_right = shift_bounding_box(filtered_regions[0], shift_x=100, shift_y=0, image_width=image_width, image_height=image_height)
+        #         filtered_regions.append(shifted_box_right)
+        #     elif len(filtered_regions) == 3:
+        #         shifted_box_down = shift_bounding_box(filtered_regions[0], shift_x=0, shift_y=100, image_width=image_width, image_height=image_height)
+        #         filtered_regions.append(shifted_box_down)
 
-with open("list_regions.json", "w") as outfile: 
+        if len(filtered_regions) > 4:
+            filtered_regions = filtered_regions[:4]
+        list_regions[img_id] = filtered_regions
+    except:
+        print(root_path)
+
+file_name = "origin_regions_chunk9.json"
+with open(file_name, "w") as outfile:
     json.dump(list_regions, outfile)
-
-
-
-
