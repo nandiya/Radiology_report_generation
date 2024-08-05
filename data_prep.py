@@ -115,5 +115,4 @@ print("count no prog test ", count_no_progress_test)
 
 with open("final_data.json", "w") as outfile: 
     json.dump(final_file, outfile)
-with open("final_dataval.json", "w") as outfile: 
-    json.dump(final_file["test"], outfile)
+
