@@ -4,3 +4,7 @@
 *.jpg
 *.out
 *.slurm
+*.npz
+ran_*.py
+__pycache__
+bbox*

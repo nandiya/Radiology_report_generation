@@ -63,7 +63,7 @@ def process_json_file(file_path, combined_data, image_width, image_height):
         combined_data[img_id] = {
             "bboxes": bboxes
         }
-        break
+
 
 def main():
     input_folder = "/group/pmc023/rnandiya/origin_train/"  # Update this to your JSON files folder
@@ -78,7 +78,7 @@ def main():
         if filename.endswith(".json"):
             file_path = os.path.join(input_folder, filename)
             process_json_file(file_path, combined_data, image_width, image_height)
-            break
+    
     
     with open(output_file, 'w') as file:
         json.dump(combined_data, file, indent=4)
