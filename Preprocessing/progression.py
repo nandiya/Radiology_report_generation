@@ -3,10 +3,19 @@ import os
 import argparse
 import pandas as pd
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--mimic_cxr_annotation", type=str)
+parser.add_argument("--progression_dir", type=str) # scene_graph folder
+parser.add_argument("--chexpert_file", type=str)
 
+args = parser.parse_args()
+
+anno = json.load(open(args.mimic_cxr_annotation, "r", encoding="utf-8"))
+chexpert = pd.read_csv(args.chexpert_file)
+chexpert = chexpert.fillna(0)
 dict_progress = {}
 
-for filename in os.scandir("/group/pmc023/rnandiya/dataset/scene_graph/scene_graph"):
+for filename in os.scandir(args.progression_dir):
     if filename.path.endswith(".json"):
         f = open(filename)
         data = json.load(f)

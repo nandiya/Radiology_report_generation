@@ -84,11 +84,15 @@ def selective_search(image, method="fast"):
 
 # Initialize variables
 root_path = "/group/pmc023/rnandiya/dataset/physionet.org/files/mimic-cxr-jpg/2.0.0/files/"
+## since the execution is done in 12 cpu in kaya, change the file name into each file in split training manually
+## for ex : imageId_disease = json.load(open("chunk1.json", "r", encoding="utf-8"))
 imageId_disease = json.load(open("final_data.json", "r", encoding="utf-8"))
 list_regions = {}
 
 
 a = 1
+
+## for img_id in imageId_disease : // for training 
 for img_id in imageId_disease["val"]:
 
     img = load_and_resize_image(root_path, imageId_disease["val"][img_id]["disease"]["image_path"][0])
@@ -97,21 +101,12 @@ for img_id in imageId_disease["val"]:
     filtered_regions = filter_regions(img, regions)
 # Ensure the filtered regions are converted to Python int
     filtered_regions = [(int(x), int(y), int(w), int(h)) for (x, y, w, h) in filtered_regions]
-    # while len(filtered_regions) < 4:
-    #     if len(filtered_regions) == 1:
-    #         mirrored_box = mirror_bounding_box(filtered_regions[0], image_width)
-    #         filtered_regions.append(mirrored_box)
-    #     elif len(filtered_regions) == 2:
-    #         shifted_box_right = shift_bounding_box(filtered_regions[0], shift_x=100, shift_y=0, image_width=image_width, image_height=image_height)
-    #         filtered_regions.append(shifted_box_right)
-    #     elif len(filtered_regions) == 3:
-    #         shifted_box_down = shift_bounding_box(filtered_regions[0], shift_x=0, shift_y=100, image_width=image_width, image_height=image_height)
-    #         filtered_regions.append(shifted_box_down)
 
     if len(filtered_regions) > 4:
         filtered_regions = filtered_regions[:4]
     list_regions[img_id] = filtered_regions
 
-file_name = "val2.json"
+
+file_name = "val.json"
 with open(file_name, "w") as outfile:
    json.dump(list_regions, outfile)

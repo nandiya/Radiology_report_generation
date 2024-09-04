@@ -61,11 +61,10 @@ def process_json_files(bbox_json_file, path_json_file, root_path):
        
         
     
-    # Stack all images into a single numpy array and save as .npy file
     combined_images_tensor = torch.stack(combined_images)
-    np.savez('test_data2.npz', data=combined_images_tensor.numpy())
+    np.savez('test_data.npz', data=combined_images_tensor.numpy())
 
-# Example usage:
+
 bbox_json_file = "test_regions_bb_4.json"  # Update this to your JSON file containing bounding box data
 path_json_file = "final_data.json"  # Update this to your JSON file containing image paths
 root_path = "/group/pmc023/rnandiya/dataset/physionet.org/files/mimic-cxr-jpg/2.0.0/files/"  # Update this to the root path of your images
