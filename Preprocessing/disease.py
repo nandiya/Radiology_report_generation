@@ -3,18 +3,26 @@ import os
 import argparse
 import pandas as pd
 
-chexpert = pd.read_csv("mimic-cxr-2.0.0-chexpert.csv")
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--mimic_cxr_annotation", type=str)
+parser.add_argument("--progression_file", type=str)
+parser.add_argument("--chexpert_file", type=str)
+
+args = parser.parse_args()
+
+anno = json.load(open(args.mimic_cxr_annotation, "r", encoding="utf-8"))
+chexpert = pd.read_csv(args.chexpert_file)
 chexpert = chexpert.fillna(0)
 
 
-anno = json.load(open("/group/pmc023/rnandiya/dataset/mimic_annotation_all.json", "r", encoding="utf-8"))
 splits = {}
 j =0
 for key in anno:
     temp_data={}
     j =0
     for i in anno[key]:
-        #print(i)
         study_id = str(i["study_id"])
         subject_id = str(i["subject_id"])
         combination = subject_id+"_"+study_id
@@ -25,10 +33,6 @@ for key in anno:
     splits[key] = temp_data
 
 
-
-# print(len(splits["train"]))
-# print(len(splits["test"]))
-# print(len(splits["val"]))
 
 chexpert['patient_id'] = chexpert['subject_id'].astype(str) + '_' + chexpert['study_id'].astype(str)
 chexpert['diseases_label'] = chexpert.drop(['subject_id', 'study_id', 'patient_id'], axis=1).values.tolist()

@@ -66,11 +66,11 @@ def process_json_file(file_path, combined_data, image_width, image_height):
 
 
 def main():
-    input_folder = "/group/pmc023/rnandiya/origin_train/"  # Update this to your JSON files folder
+    input_folder = "/group/pmc023/rnandiya/origin_train/"  
     output_file = "train_bb.json"  # Update this to your desired output file
     
-    image_width = 448  # Set the image width to 448
-    image_height = 448  # Set the image height to 448
+    image_width = 448  
+    image_height = 448  
     
     combined_data = {}
     
