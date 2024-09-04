@@ -43,11 +43,6 @@ for key in anno:
     splits[key] = temp_data
 
 
-
-# print(len(splits["train"]))
-# print(len(splits["test"]))
-# print(len(splits["val"]))
-
 chexpert['patient_id'] = chexpert['subject_id'].astype(str) + '_' + chexpert['study_id'].astype(str)
 chexpert['diseases_label'] = chexpert.drop(['subject_id', 'study_id', 'patient_id'], axis=1).values.tolist()
 chexpert = chexpert[['patient_id', 'diseases_label']]
@@ -67,51 +62,24 @@ dict_progress = json.load(open(args.progression_file, "r", encoding="utf-8"))
 train = {}
 val = {}
 test = {}
-count_no_progress_tr = 0
-count_no_progress_val = 0
-count_no_progress_test = 0
+
 
 for i in imageId_disease["train"]:
     if i in dict_progress:
-        total_sum = sum(dict_progress[i].values())
-        if total_sum == 0:
-            count_no_progress_tr = count_no_progress_tr +1
-            if count_no_progress_tr <= 14330:
-                train[i] = {"progress" : dict_progress[i], "disease": imageId_disease["train"][i]}
-        else:
-            train[i] = {"progress" : dict_progress[i], "disease": imageId_disease["train"][i]}
+        train[i] = {"progress" : dict_progress[i], "disease": imageId_disease["train"][i]}
 for i in imageId_disease["val"]:
     if i in dict_progress:
-        total_sum = sum(dict_progress[i].values())
-        if total_sum == 0:
-            count_no_progress_val = count_no_progress_val +1
-            if count_no_progress_val <= 106:
-                val[i] = {"progress" : dict_progress[i], "disease": imageId_disease["val"][i]}
-        else:
-            val[i] = {"progress" : dict_progress[i], "disease": imageId_disease["val"][i]}
+        val[i] = {"progress" : dict_progress[i], "disease": imageId_disease["val"][i]}
 for i in imageId_disease["test"]:
     if i in dict_progress:
-        total_sum = sum(dict_progress[i].values())
-        if total_sum == 0:
-            count_no_progress_test = count_no_progress_test +1
-            if count_no_progress_val <= 456:
-                val[i] = {"progress" : dict_progress[i], "disease": imageId_disease["val"][i]}
-        else:
-            test[i] = {"progress" : dict_progress[i], "disease": imageId_disease["test"][i]}
+        test[i] = {"progress" : dict_progress[i], "disease": imageId_disease["test"][i]}
 
 final_file = {
     "train": train,
     "val": val,
     "test" : test
 }
-print(len(final_file["val"]))
-print(len(final_file["train"]))
-#print(final_file["test"])
-print(len(final_file["test"]))
 
-print("count no prog train ", count_no_progress_tr)
-print("count no prog val ", count_no_progress_val)
-print("count no prog test ", count_no_progress_test)
 
 with open("final_data.json", "w") as outfile: 
     json.dump(final_file, outfile)
