@@ -5,6 +5,7 @@ from transformers import ViTFeatureExtractor, ViTModel
 import json
 import torch.nn as nn
 import torch.nn.functional as F
+import csv
 
 class MultiFileDataset(Dataset):
     def __init__(self, image_npz_files, label_file, train=True):
@@ -83,22 +84,22 @@ def calculate_metrics(predictions, labels, num_classes):
     for i in range(num_classes):
         y_true = np.array([label[i] for label in labels])
         y_pred = np.array([pred[i] for pred in predictions])
-        
+       
         TP = np.sum((y_true == 1) & (y_pred == 1))
         FP = np.sum((y_true == 0) & (y_pred == 1))
         FN = np.sum((y_true == 1) & (y_pred == 0))
         TN = np.sum((y_true == 0) & (y_pred == 0))
 
-        precision = TP / (TP + FP) if (TP + FP) > 0 else 0
-        recall = TP / (TP + FN) if (TP + FN) > 0 else 0
-        f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-        accuracy = (TP + TN) / (TP + FP + FN + TN) if (TP + FP + FN + TN) > 0 else 0
+        precision =  0 if (TP + FP) == 0 else TP / (TP + FP)
+        recall = 0 if  (TP + FN) == 0 else TP / (TP + FN) 
+        f1_score = 0 if (precision + recall) == 0 else 2 * (precision * recall) / (precision + recall) 
+        accuracy = (TP + TN) / (TP + FP + FN + TN)
 
         metrics['precision'].append(precision)
         metrics['recall'].append(recall)
         metrics['f1_score'].append(f1_score)
         metrics['accuracy'].append(accuracy)
-
+      
     return metrics
 
 def print_metrics(metrics, class_names):
@@ -122,7 +123,7 @@ def evaluate_model(test_image_file, label_file, model_path, batch_size=16, devic
     model.eval()
 
     # Load the test dataset
-    test_dataset = MultiFileDataset([test_image_file], label_file, train=False)
+    test_dataset = MultiFileDataset(test_image_file, label_file, train=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     all_preds = []
@@ -140,22 +141,32 @@ def evaluate_model(test_image_file, label_file, model_path, batch_size=16, devic
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
 
-    # Debug prints
-    print(f"Predictions shape: {all_preds.shape}")
-    print(f"Labels shape: {all_labels.shape}")
-    print(f"Sample prediction: {all_preds[0]}")
-    print(f"Sample label: {all_labels[0]}")
-
-    # Calculate precision, recall, and F1-score for each class
+    # Save predictions and labels to a CSV file
+    csv_file = "predictions_validation.csv"
     diseases = ["Atelectasis", "Cardiomegaly", "Consolidation", "Edema", "Enlarged Cardiomediastinum",
                 "Fracture", "Lung Lesion", "Lung Opacity", "No Finding", "Pleural Effusion", 
                 "Pleural Other", "Pneumonia", "Pneumothorax", "Support Devices"]
+    with open(csv_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        header = ['True ' + disease for disease in diseases] + ['Pred ' + disease for disease in diseases]
+        writer.writerow(header)
+        for i in range(len(all_preds)):
+            row = list(all_labels[i]) + list(all_preds[i])
+            writer.writerow(row)
 
+    # Debug prints
+    print(f"Predictions shape: {all_preds.shape}")
+    print(f"Labels shape: {all_labels.shape}")
+    print(f"Sample prediction: {all_preds[4]}")
+    print(f"Sample label: {all_labels[4]}")
+    print(f"Predictions saved to {csv_file}")
+
+    # Calculate precision, recall, and F1-score for each class
     metrics = calculate_metrics(all_preds, all_labels, len(diseases))
     print_metrics(metrics, diseases)
 
 # Example usage:
-test_image_file = '/group/pmc023/rnandiya/validation2.npz'
+test_image_file = ["/group/pmc023/rnandiya/validation2.npz"]
 label_file = 'final_data.json'
-model_path = '/group/pmc023/rnandiya/model/disease_detector_model.pth'
+model_path = '/group/pmc023/rnandiya/model/disease_detector_model11.pth'
 evaluate_model(test_image_file, label_file, model_path, batch_size=1000)

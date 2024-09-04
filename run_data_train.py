@@ -221,6 +221,6 @@ def train_model(train_image_files, label_file, val_image_file, num_epochs=1, bat
 
 image_files = [f'/group/pmc023/rnandiya/region_train_2_npz/chunk{i}.npz' for i in range(1, 13)]  # List of all data files
 label_file = 'final_data.json'  
-val_image_file = "/group/pmc023/rnandiya/validation2.npz"
-train_model(image_files, label_file, val_image_file ,num_epochs=40, batch_size=1000, learning_rate=0.01, 
-            checkpoint_path='/group/pmc023/rnandiya/disease_detector_checkpoint5.pth')
+val_image_file =   
+train_model(image_files, label_file, val_image_file ,num_epochs=40, batch_size=1000, learning_rate=0.07, 
+            checkpoint_path='/group/pmc023/rnandiya/disease_detector_checkpoint10.pth')
