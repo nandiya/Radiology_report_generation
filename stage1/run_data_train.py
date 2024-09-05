@@ -219,6 +219,8 @@ def train_model(train_image_files, label_file, val_image_file, num_epochs=1, bat
     plt.legend()
     plt.savefig('accuracy_plot.png')
 
+
+
 image_files = [f'/group/pmc023/rnandiya/region_train_2_npz/chunk{i}.npz' for i in range(1, 13)]  # List of all data files
 label_file = 'final_data.json'  
 val_image_file =   
