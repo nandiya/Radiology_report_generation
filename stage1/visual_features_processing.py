@@ -99,7 +99,7 @@ for img_id in imageId_disease["val"]:
     image_height, image_width, _ = img.shape
     regions = selective_search(img)
     filtered_regions = filter_regions(img, regions)
-# Ensure the filtered regions are converted to Python int
+
     filtered_regions = [(int(x), int(y), int(w), int(h)) for (x, y, w, h) in filtered_regions]
 
     if len(filtered_regions) > 4:

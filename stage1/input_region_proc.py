@@ -51,10 +51,11 @@ def process_json_files(bbox_json_file, path_json_file, root_path):
         path_data = json.load(path_file)
     a = 1
     for img_id, bboxes_dict in bbox_data.items():
-        if img_id in path_data["test"]:
-            image_path = os.path.join(root_path, path_data["test"][img_id]["disease"]["image_path"][0])
+        if img_id in path_data: 
     
-            if os.path.exists(image_path):  # Ensure the image file exists
+            image_path = os.path.join(root_path, path_data[img_id]["disease"]["image_path"][0])
+    
+            if os.path.exists(image_path):  
                 bboxes = bboxes_dict
                 torch_image = process_image(image_path, bboxes["bboxes"])
                 combined_images.append(torch_image)
@@ -62,11 +63,12 @@ def process_json_files(bbox_json_file, path_json_file, root_path):
         
     
     combined_images_tensor = torch.stack(combined_images)
-    np.savez('test_data.npz', data=combined_images_tensor.numpy())
+    np.savez('chunk1.npz', data=combined_images_tensor.numpy())
 
 
-bbox_json_file = "test_regions_bb_4.json"  # Update this to your JSON file containing bounding box data
-path_json_file = "final_data.json"  # Update this to your JSON file containing image paths
-root_path = "/group/pmc023/rnandiya/dataset/physionet.org/files/mimic-cxr-jpg/2.0.0/files/"  # Update this to the root path of your images
+bbox_json_file = "test_regions_bb_4.json"  
 
+## change the json to the chunk file for training or final_data.json for val and testing
+path_json_file = "chunk1.json"  
+root_path = "/group/pmc023/rnandiya/dataset/physionet.org/files/mimic-cxr-jpg/2.0.0/files/"  
 process_json_files(bbox_json_file, path_json_file, root_path)
