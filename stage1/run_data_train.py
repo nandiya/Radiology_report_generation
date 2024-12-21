@@ -90,7 +90,7 @@ class diseaseDetector(nn.Module):
         linear56 = [self.bn2(F.relu(self.linear2(disease))) for disease in diseases]
         combined = torch.cat(linear56, dim=1)
         combined = self.dropout2(self.bn3(F.relu(self.linear3(combined))))
-        result = combined
+        result = F.tanh(combined)
 
         return result
 
@@ -173,7 +173,7 @@ def train_model(train_image_files, label_file, val_image_file, num_epochs=1, bat
                 outputs = model(images)
                 loss = criterion(outputs, labels)
                 val_loss += loss.item()
-                preds = (outputs > 0.5).float()
+                preds = (outputs > 0.2).float()
                 correct_val += (preds == labels).sum().item()
                 total_val += labels.numel()
 
@@ -223,6 +223,6 @@ def train_model(train_image_files, label_file, val_image_file, num_epochs=1, bat
 
 image_files = [f'/group/pmc023/rnandiya/region_train_2_npz/chunk{i}.npz' for i in range(1, 13)]  # List of all data files
 label_file = 'final_data.json'  
-val_image_file =   
-train_model(image_files, label_file, val_image_file ,num_epochs=40, batch_size=1000, learning_rate=0.07, 
-            checkpoint_path='/group/pmc023/rnandiya/disease_detector_checkpoint10.pth')
+val_image_file = "/group/pmc023/rnandiya/validation2.npz"
+train_model(image_files, label_file, val_image_file ,num_epochs=30, batch_size=1000, learning_rate=0.05, 
+            checkpoint_path='/group/pmc023/rnandiya/disease_detector_checkpoint12.pth')

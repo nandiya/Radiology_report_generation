@@ -4,6 +4,7 @@ mimic*
 *.ipynb
 *.jpg
 *.out
+*.txt
 *.slurm
 *.npz
 ran_*.py
